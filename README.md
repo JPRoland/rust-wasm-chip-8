@@ -16,3 +16,7 @@ A CHIP-8 interpreter in Rust aimed at the browser via WebAssembly. Built mostly 
 - `npm run start` inside the `www` directory
 - Navigate to http://localhost:8080 in your browser
 - Load a ROM and have fun!
+
+## Todo
+
+- All of the things

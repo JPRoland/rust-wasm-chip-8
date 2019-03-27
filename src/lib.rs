@@ -1,3 +1,7 @@
+extern crate cfg_if;
+extern crate rand;
+extern crate wasm_bindgen;
+
 const MEM_SIZE: usize = 4096;
 const DISPLAY_WIDTH: usize = 64;
 const DISPLAY_HEIGHT: usize = 32;

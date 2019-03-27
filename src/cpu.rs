@@ -1,3 +1,4 @@
+use rand::rngs::OsRng;
 use wasm_bindgen::prelude::*;
 
 use crate::display::Display;
@@ -48,6 +49,40 @@ impl CPU {
       st: 0,
     }
   }
+
+  pub fn load(&mut self, data: &[u8]) {
+    self.memory[0x200..0x200 + data.len()].copy_from_slice(data);
+  }
+
+  fn decrement_timers(&mut self) {
+    if self.st > 0 {
+      self.st -= 1;
+    }
+
+    if self.dt > 0 {
+      self.dt -= 1;
+    }
+  }
+
+  fn get_opcode(&self) -> u16 {
+    (self.memory[self.pc as usize] as u16) << 8 | (self.memory[self.pc as usize + 1] as u16)
+  }
+}
+
+enum ProgramCounter {
+  Next,
+  Skip,
+  Jump(usize),
+}
+
+impl ProgramCounter {
+  fn skip_if(skip: bool) -> ProgramCounter {
+    if skip {
+      ProgramCounter::Skip
+    } else {
+      ProgramCounter::Next
+    }
+  }
 }
 
 struct Opcode {
@@ -79,5 +114,18 @@ impl Opcode {
       nnn,
       kk,
     }
+  }
+}
+
+#[wasm_bindgen]
+pub struct Output {
+  vram: Vec<u8>,
+  beep: bool,
+}
+
+#[wasm_bindgen]
+impl Output {
+  pub fn new(vram: Vec<u8>, beep: bool) -> Output {
+    Output { vram, beep }
   }
 }
