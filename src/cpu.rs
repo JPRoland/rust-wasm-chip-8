@@ -10,14 +10,14 @@ use crate::MEM_SIZE;
 #[wasm_bindgen]
 pub struct CPU {
   // Index register
-  i: u16,
+  i: usize,
   // Program counter
-  pc: u16,
+  pc: usize,
   // registers
   v: [u8; 16],
-  stack: [u16; 16],
+  stack: [usize; 16],
   // Stack pointer
-  sp: u8,
+  sp: usize,
   // Delay timer
   dt: u8,
   // Sound timer
@@ -52,6 +52,96 @@ impl CPU {
 
   pub fn load(&mut self, data: &[u8]) {
     self.memory[0x200..0x200 + data.len()].copy_from_slice(data);
+  }
+
+  pub fn emulate_cycle(&mut self) -> Output {
+    let opcode = self.get_opcode();
+    let parts = Opcode::new(opcode);
+    self.decrement_timers();
+    self.run_instruction(&parts);
+
+    Output::new(self.display.vram, self.st > 0)
+  }
+
+  fn run_instruction(&mut self, opcode: &Opcode) {
+    let program_count = match opcode.nibbles {
+      (0, 0, 0xE, 0x0) => self.op_00E0(),
+      (0, 0, 0xE, 0xE) => self.op_00EE(),
+      (0x1, _, _, _) => self.op_1NNN(opcode.nnn),
+      (0x2, _, _, _) => self.op_2NNN(opcode.nnn),
+      (0x3, _, _, _) => self.op_3XKK(opcode.x, opcode.kk),
+      (0x4, _, _, _) => self.op_4XKK(opcode.x, opcode.kk),
+      (0x5, _, _, _) => self.op_5XY0(opcode.x, opcode.y),
+      (0x6, _, _, _) => self.op_6XKK(opcode.x, opcode.kk),
+      (0x7, _, _, _) => self.op_7XKK(opcode.x, opcode.kk),
+      (0x8, _, _, 0x0) => self.op_8XY0(opcode.x, opcode.y),
+      (0x8, _, _, 0x1) => self.op_8XY1(opcode.x, opcode.y),
+      (0x8, _, _, 0x2) => self.op_8XY2(opcode.x, opcode.y),
+      (0x8, _, _, 0x3) => self.op_8XY3(opcode.x, opcode.y),
+      (0x8, _, _, 0x4) => self.op_8XY4(opcode.x, opcode.y),
+      (0x8, _, _, 0x5) => self.op_8XY5(opcode.x, opcode.y),
+      (0x8, _, _, 0x6) => self.op_8XY6(opcode.x),
+      (0x8, _, _, 0x7) => self.op_8XY7(opcode.x, opcode.y),
+      (0x8, _, _, 0xE) => self.op_8XYE(opcode.x),
+      (0x9, _, _, _) => self.op_9XY0(opcode.x, opcode.y),
+      (0xA, _, _, _) => self.op_ANNN(opcode.nnn),
+      (0xB, _, _, _) => self.op_BNNN(opcode.nnn),
+      (0xC, _, _, _) => self.op_CXKK(opcode.x, opcode.kk),
+      (0xD, _, _, _) => self.op_DXYN(opcode.x, opcode.y, opcode.n),
+      (0xE, _, _, 0xE) => self.op_EX9E(opcode.x, opcode.y),
+      (0xE, _, _, 0x1) => self.op_EXA1(opcode.x),
+      (0xF, _, 0x0, 0x7) => self.op_FX07(opcode.x),
+      (0xF, _, 0x0, 0xA) => self.op_FX0A(opcode.x),
+      (0xF, _, 0x1, 0x5) => self.op_FX15(opcode.x),
+      (0xF, _, 0x1, 0x8) => self.op_FX18(opcode.x),
+      (0xF, _, 0x1, 0xE) => self.op_FX1E(opcode.x),
+      (0xF, _, 0x2, 0x9) => self.op_FX29(opcode.x),
+      (0xF, _, 0x3, 0x3) => self.op_FX33(opcode.x),
+      (0xF, _, 0x5, 0x5) => self.op_FX55(opcode.x),
+      (0xF, _, 0x6, 0x5) => self.op_FX65(opcode.x),
+      _ => ProgramCounter::Next,
+    };
+
+    match program_count {
+      ProgramCounter::Next => self.pc += 2,
+      ProgramCounter::Skip => self.pc += 4,
+      ProgramCounter::Jump(address) => self.pc = address as u16,
+    }
+  }
+
+  // CLS
+  fn op_00E0(&mut self) -> ProgramCounter {
+    self.display.cls();
+    ProgramCounter::Next
+  }
+
+  // RET
+  fn op_00EE(&mut self) -> ProgramCounter {
+    self.sp -= 1;
+    ProgramCounter::Jump(self.stack[self.sp])
+  }
+
+  // JP
+  fn op_1NNN(&mut self, nnn: usize) -> ProgramCounter {
+    ProgramCounter::Jump(nnn)
+  }
+
+  // CALL
+  fn op_2NNN(&mut self, nnn: usize) -> ProgramCounter {
+    self.stack[self.sp] = self.pc + 2;
+    self.sp += 1;
+
+    ProgramCounter::Jump(nnn)
+  }
+
+  // SE Vx
+  fn op_3XKK(&mut self, x: usize, kk: u8) -> ProgramCounter {
+    ProgramCounter::skip_if(self.v[x] == kk)
+  }
+
+  // SNE Vx
+  fn op_4XKK(&mut self, x: usize, kk: u8) -> ProgramCounter {
+    ProgramCounter::skip_if(self.v[x] != kk)
   }
 
   fn decrement_timers(&mut self) {

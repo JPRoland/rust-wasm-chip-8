@@ -4,7 +4,7 @@ use crate::DISPLAY_WIDTH;
 const VRAM_SIZE: usize = DISPLAY_HEIGHT * DISPLAY_WIDTH;
 
 pub struct Display {
-  vram: [u8; VRAM_SIZE],
+  pub vram: [u8; VRAM_SIZE],
 }
 
 impl Display {
