@@ -121,12 +121,12 @@ impl CPU {
     ProgramCounter::Jump(self.stack[self.sp])
   }
 
-  // JP
+  // JP addr
   fn op_1NNN(&mut self, nnn: usize) -> ProgramCounter {
     ProgramCounter::Jump(nnn)
   }
 
-  // CALL
+  // CALL addr
   fn op_2NNN(&mut self, nnn: usize) -> ProgramCounter {
     self.stack[self.sp] = self.pc + 2;
     self.sp += 1;
@@ -134,15 +134,147 @@ impl CPU {
     ProgramCounter::Jump(nnn)
   }
 
-  // SE Vx
+  // SE Vx, byte
   fn op_3XKK(&mut self, x: usize, kk: u8) -> ProgramCounter {
     ProgramCounter::skip_if(self.v[x] == kk)
   }
 
-  // SNE Vx
+  // SNE Vx, byte
   fn op_4XKK(&mut self, x: usize, kk: u8) -> ProgramCounter {
     ProgramCounter::skip_if(self.v[x] != kk)
   }
+
+  // SE Vx, Vy
+  fn op_5XY0(&mut self, x: usize, y: usize) -> ProgramCounter {
+    ProgramCounter::skip_if(self.v[x] == self.v[y])
+  }
+
+  // LD Vx, byte
+  fn op_6XKK(&mut self, x: usize, kk: u8) -> ProgramCounter {
+    self.v[x] = kk;
+    ProgramCounter::Next
+  }
+
+  // ADD Vx, byte
+  fn op_7XKK(&mut self, x: usize, kk: u8) -> ProgramCounter {
+    self.v[x] += kk;
+    ProgramCounter::Next
+  }
+
+  // LD Vx, Vy
+  fn op_8XY0(&mut self, x: usize, y: usize) -> ProgramCounter {
+    self.v[x] = self.v[y];
+    ProgramCounter::Next
+  }
+
+  // OR Vx, Vy
+  fn op_8XY1(&mut self, x: usize, y: usize) -> ProgramCounter {
+    self.v[x] |= self.v[y];
+    ProgramCounter::Next
+  }
+
+  // AND Vx, Vy
+  fn op_8XY2(&mut self, x: usize, y: usize) -> ProgramCounter {
+    self.v[x] &= self.v[y];
+    ProgramCounter::Next
+  }
+
+  //XOR Vx, Vy
+  fn op_8XY3(&mut self, x: usize, y: usize) -> ProgramCounter {
+    self.v[x] ^= self.v[y];
+    ProgramCounter::Next
+  }
+
+  // ADD Vx, Vy
+  fn op_8XY4(&mut self, x: usize, y: usize) -> ProgramCounter {
+    let result = self.v[x] as u16 + self.v[y] as u16;
+    self.v[x] = result as u8;
+    self.v[0xF] = if result > 0xFF { 1 } else { 0 };
+
+    ProgramCounter::Next
+  }
+
+  // SUB Vx, Vy
+  fn op_8XY5(&mut self, x: usize, y: usize) -> ProgramCounter {
+    let result = self.v[x] as i8 - self.v[y] as i8;
+    self.v[x] = result as u8;
+    self.v[0xF] = if result < 0 { 1 } else { 0 };
+
+    ProgramCounter::Next
+  }
+
+  // SHR Vx, {, Vy}
+  fn op_8XY6(&mut self, x: usize) -> ProgramCounter {
+    self.v[0xF] = self.v[x] & 1;
+    self.v[x] >>= 1;
+    ProgramCounter::Next
+  }
+
+  // SUBN Vx, Vy
+  fn op_8XY7(&mut self, x: usize, y: usize) -> ProgramCounter {
+    let result = self.v[x] as i8 - self.v[y] as i8;
+    self.v[x] = result as u8;
+    self.v[0xF] = if result < 0 { 1 } else { 0 };
+
+    ProgramCounter::Next
+  }
+
+  // SHL Vx {, Vy}
+  fn op_8XYE(&mut self, x: usize) -> ProgramCounter {
+    self.v[0xF] = self.v[x] & 1;
+    self.v[x] <<= 1;
+    ProgramCounter::Next
+  }
+
+  // SNE Vx, Vy
+  fn op_9XY0(&mut self, x: usize, y: usize) -> ProgramCounter {
+    ProgramCounter::skip_if(true)
+  }
+
+  // LD I, addr
+  fn op_ANNN() -> ProgramCounter {}
+
+  // JP V0, addr
+  fn op_BNNN() -> ProgramCounter {}
+
+  // RND Vx, byte
+  fn op_CXKK() -> ProgramCounter {}
+
+  // DRW Vx, Vy, nibble
+  fn op_DXYN() -> ProgramCounter {}
+
+  // SKP Vx
+  fn op_EX9E() -> ProgramCounter {}
+
+  // SKNP Vx
+  fn op_EXA1() -> ProgramCounter {}
+
+  // LD Vx, DT
+  fn op_FX07() -> ProgramCounter {}
+
+  // LD Vx, K
+  fn op_FX0A() -> ProgramCounter {}
+
+  // LD DT, Vx
+  fn op_FX15() -> ProgramCounter {}
+
+  // LD ST, Vx
+  fn op_FX18() -> ProgramCounter {}
+
+  // ADD I, Vx
+  fn op_FX1E() -> ProgramCounter {}
+
+  // LD F, Vx
+  fn op_FX29() -> ProgramCounter {}
+
+  // LD B, Vx
+  fn op_FX33() -> ProgramCounter {}
+
+  // LD [I], Vx
+  fn op_FX55() -> ProgramCounter {}
+
+  // LD Vx, [I]
+  fn op_FX65() -> ProgramCounter {}
 
   fn decrement_timers(&mut self) {
     if self.st > 0 {
