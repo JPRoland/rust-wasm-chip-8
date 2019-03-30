@@ -19,4 +19,4 @@ A CHIP-8 interpreter in Rust aimed at the browser via WebAssembly. Built mostly 
 
 ## Todo
 
-- All of the things
+- Implement web interface

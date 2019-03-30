@@ -1,4 +1,5 @@
-use rand::rngs::OsRng;
+use rand_os::rand_core::RngCore;
+use rand_os::OsRng;
 use wasm_bindgen::prelude::*;
 
 use crate::display::Display;
@@ -88,7 +89,7 @@ impl CPU {
       (0xB, _, _, _) => self.op_BNNN(opcode.nnn),
       (0xC, _, _, _) => self.op_CXKK(opcode.x, opcode.kk),
       (0xD, _, _, _) => self.op_DXYN(opcode.x, opcode.y, opcode.n),
-      (0xE, _, _, 0xE) => self.op_EX9E(opcode.x, opcode.y),
+      (0xE, _, _, 0xE) => self.op_EX9E(opcode.x),
       (0xE, _, _, 0x1) => self.op_EXA1(opcode.x),
       (0xF, _, 0x0, 0x7) => self.op_FX07(opcode.x),
       (0xF, _, 0x0, 0xA) => self.op_FX0A(opcode.x),
@@ -105,7 +106,7 @@ impl CPU {
     match program_count {
       ProgramCounter::Next => self.pc += 2,
       ProgramCounter::Skip => self.pc += 4,
-      ProgramCounter::Jump(address) => self.pc = address as u16,
+      ProgramCounter::Jump(address) => self.pc = address,
     }
   }
 
@@ -221,60 +222,120 @@ impl CPU {
 
   // SHL Vx {, Vy}
   fn op_8XYE(&mut self, x: usize) -> ProgramCounter {
-    self.v[0xF] = self.v[x] & 1;
+    self.v[0xF] = self.v[x] & 0x80;
     self.v[x] <<= 1;
     ProgramCounter::Next
   }
 
   // SNE Vx, Vy
   fn op_9XY0(&mut self, x: usize, y: usize) -> ProgramCounter {
-    ProgramCounter::skip_if(true)
+    ProgramCounter::skip_if(self.v[x] != self.v[y])
   }
 
   // LD I, addr
-  fn op_ANNN() -> ProgramCounter {}
+  fn op_ANNN(&mut self, nnn: usize) -> ProgramCounter {
+    self.i = nnn;
+    ProgramCounter::Next
+  }
 
   // JP V0, addr
-  fn op_BNNN() -> ProgramCounter {}
+  fn op_BNNN(&mut self, nnn: usize) -> ProgramCounter {
+    ProgramCounter::Jump(self.v[0] as usize + nnn)
+  }
 
   // RND Vx, byte
-  fn op_CXKK() -> ProgramCounter {}
+  fn op_CXKK(&mut self, x: usize, kk: u8) -> ProgramCounter {
+    let mut rng = OsRng::new().unwrap();
+    let mut key = [0u8; 16];
+    rng.fill_bytes(&mut key);
+    self.v[x] = rng.next_u32() as u8 & kk;
+
+    ProgramCounter::Next
+  }
 
   // DRW Vx, Vy, nibble
-  fn op_DXYN() -> ProgramCounter {}
+  fn op_DXYN(&mut self, x: usize, y: usize, n: usize) -> ProgramCounter {
+    let vx = self.v[x] as usize;
+    let vy = self.v[y] as usize;
+    let i = self.i;
+    let sprite = &self.memory[i..i + n];
+    let collision = self.display.draw(vx, vy, sprite);
+    self.v[0xF] = if collision { 1 } else { 0 };
+    ProgramCounter::Next
+  }
 
   // SKP Vx
-  fn op_EX9E() -> ProgramCounter {}
+  fn op_EX9E(&mut self, x: usize) -> ProgramCounter {
+    ProgramCounter::skip_if(self.keypad.is_key_pressed(self.v[x]))
+  }
 
   // SKNP Vx
-  fn op_EXA1() -> ProgramCounter {}
+  fn op_EXA1(&mut self, x: usize) -> ProgramCounter {
+    ProgramCounter::skip_if(!self.keypad.is_key_pressed(self.v[x]))
+  }
 
   // LD Vx, DT
-  fn op_FX07() -> ProgramCounter {}
+  fn op_FX07(&mut self, x: usize) -> ProgramCounter {
+    self.v[x] = self.dt;
+    ProgramCounter::Next
+  }
 
   // LD Vx, K
-  fn op_FX0A() -> ProgramCounter {}
+  fn op_FX0A(&mut self, x: usize) -> ProgramCounter {
+    self.wait_for_keypress(x);
+
+    ProgramCounter::Next
+  }
 
   // LD DT, Vx
-  fn op_FX15() -> ProgramCounter {}
+  fn op_FX15(&mut self, x: usize) -> ProgramCounter {
+    self.dt = self.v[x];
+    ProgramCounter::Next
+  }
 
   // LD ST, Vx
-  fn op_FX18() -> ProgramCounter {}
+  fn op_FX18(&mut self, x: usize) -> ProgramCounter {
+    self.st = self.v[x];
+    ProgramCounter::Next
+  }
 
   // ADD I, Vx
-  fn op_FX1E() -> ProgramCounter {}
+  fn op_FX1E(&mut self, x: usize) -> ProgramCounter {
+    self.i += self.v[x] as usize;
+    ProgramCounter::Next
+  }
 
   // LD F, Vx
-  fn op_FX29() -> ProgramCounter {}
+  fn op_FX29(&mut self, x: usize) -> ProgramCounter {
+    self.i = self.v[x] as usize * 5;
+    ProgramCounter::Next
+  }
 
   // LD B, Vx
-  fn op_FX33() -> ProgramCounter {}
+  fn op_FX33(&mut self, x: usize) -> ProgramCounter {
+    self.memory[self.i] = self.v[x] / 100;
+    self.memory[self.i + 1] = (self.v[x] % 100) / 10;
+    self.memory[self.i + 2] = self.v[x] % 10;
+    ProgramCounter::Next
+  }
 
   // LD [I], Vx
-  fn op_FX55() -> ProgramCounter {}
+  fn op_FX55(&mut self, x: usize) -> ProgramCounter {
+    for i in 0..=x {
+      self.memory[self.i + i] = self.v[i];
+    }
+
+    ProgramCounter::Next
+  }
 
   // LD Vx, [I]
-  fn op_FX65() -> ProgramCounter {}
+  fn op_FX65(&mut self, x: usize) -> ProgramCounter {
+    for i in 0..=x {
+      self.v[i] = self.memory[self.i + i];
+    }
+
+    ProgramCounter::Next
+  }
 
   fn decrement_timers(&mut self) {
     if self.st > 0 {
@@ -286,8 +347,18 @@ impl CPU {
     }
   }
 
+  fn wait_for_keypress(&mut self, x: usize) {
+    for (i, key) in self.keypad.keys.iter().enumerate() {
+      if *key == true {
+        self.v[x] = i as u8;
+        break;
+      }
+    }
+    self.pc -= 2;
+  }
+
   fn get_opcode(&self) -> u16 {
-    (self.memory[self.pc as usize] as u16) << 8 | (self.memory[self.pc as usize + 1] as u16)
+    (self.memory[self.pc] as u16) << 8 | (self.memory[self.pc + 1] as u16)
   }
 }
 
@@ -341,13 +412,13 @@ impl Opcode {
 
 #[wasm_bindgen]
 pub struct Output {
-  vram: Vec<u8>,
+  vram: [u8; 2048],
   beep: bool,
 }
 
 #[wasm_bindgen]
 impl Output {
-  pub fn new(vram: Vec<u8>, beep: bool) -> Output {
+  pub fn new(vram: [u8; 2048], beep: bool) -> Output {
     Output { vram, beep }
   }
 }

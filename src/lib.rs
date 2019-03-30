@@ -1,5 +1,5 @@
 extern crate cfg_if;
-extern crate rand;
+extern crate rand_os;
 extern crate wasm_bindgen;
 
 const MEM_SIZE: usize = 4096;
