@@ -16,9 +16,9 @@ const updateDisplay = (state, ctx, w, h) => {
   const imageData = ctx.createImageData(w, h);
 
   for (let i = 0; i < state.length; i++) {
-    imageData.data[i * 4] = state[i] === 1 ? 0x33 : 0;
-    imageData.data[i * 4 + 1] = state[i] === 1 ? 0xff : 0;
-    imageData.data[i * 4 + 2] = state[i] === 1 ? 0x66 : 0;
+    imageData.data[i * 4] = state[i] === 1 ? 0xff : 0;
+    imageData.data[i * 4 + 1] = state[i] === 1 ? 0xa5 : 0;
+    imageData.data[i * 4 + 2] = 0;
     imageData.data[i * 4 + 3] = 255;
   }
 

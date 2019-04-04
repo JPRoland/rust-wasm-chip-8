@@ -4,14 +4,21 @@
     <meta charset="utf-8" />
     <title>CHIP-8</title>
 
+    <link
+      href="https://fonts.googleapis.com/css?family=VT323"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <!-- <script src="./index.js"></script> -->
 
-    <h1>CHIP-8</h1>
+    <header class="header">
+      <h1 class="header__headline">CHIP-8</h1>
 
-    <p>CHIP-8 interpreter written in Rust. Load a ROM to get started.</p>
+      <p class="header__text">CHIP-8 interpreter written in Rust. Load a ROM to get started.</p>
+    </header>
+
 
     <section class="emu-container">
       <label for="roms">Select a ROM:</label>

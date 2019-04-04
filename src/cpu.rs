@@ -5,6 +5,8 @@ use wasm_bindgen::prelude::*;
 use crate::display::Display;
 use crate::font::FONT_SET;
 use crate::keypad::Keypad;
+use crate::DISPLAY_HEIGHT;
+use crate::DISPLAY_WIDTH;
 
 use crate::MEM_SIZE;
 
@@ -183,7 +185,8 @@ impl CPU {
 
   // ADD Vx, byte
   fn op_7XKK(&mut self, x: usize, kk: u8) -> ProgramCounter {
-    self.v[x] += kk;
+    let result = self.v[x] as u16 + kk as u16;
+    self.v[x] = result as u8;
     ProgramCounter::Next
   }
 
@@ -222,9 +225,8 @@ impl CPU {
 
   // SUB Vx, Vy
   fn op_8XY5(&mut self, x: usize, y: usize) -> ProgramCounter {
-    let result = self.v[x] as i8 - self.v[y] as i8;
-    self.v[x] = result as u8;
     self.v[0xF] = if self.v[x] > self.v[y] { 1 } else { 0 };
+    self.v[x] = self.v[x].wrapping_sub(self.v[y]);
 
     ProgramCounter::Next
   }
@@ -238,9 +240,8 @@ impl CPU {
 
   // SUBN Vx, Vy
   fn op_8XY7(&mut self, x: usize, y: usize) -> ProgramCounter {
-    let result = self.v[x] as i8 - self.v[y] as i8;
-    self.v[x] = result as u8;
-    self.v[0xF] = if self.v[x] > self.v[y] { 1 } else { 0 };
+    self.v[0xF] = if self.v[y] > self.v[x] { 1 } else { 0 };
+    self.v[x] = self.v[y].wrapping_sub(self.v[x]);
 
     ProgramCounter::Next
   }
@@ -283,9 +284,10 @@ impl CPU {
     let vx = self.v[x] as usize;
     let vy = self.v[y] as usize;
     let i = self.i;
+    self.v[0x0F] = 0;
     let sprite = &self.memory[i..i + n];
     let collision = self.display.draw(vx, vy, sprite);
-    self.v[0xF] = if collision { 1 } else { 0 };
+    self.v[0x0F] = if collision { 1 } else { 0 };
     ProgramCounter::Next
   }
 
@@ -327,6 +329,7 @@ impl CPU {
   // ADD I, Vx
   fn op_FX1E(&mut self, x: usize) -> ProgramCounter {
     self.i += self.v[x] as usize;
+    self.v[0xF] = if self.i > 0xF00 { 1 } else { 0 };
     ProgramCounter::Next
   }
 
