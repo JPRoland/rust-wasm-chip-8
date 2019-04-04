@@ -4,26 +4,26 @@ use crate::DISPLAY_WIDTH;
 const VRAM_SIZE: usize = DISPLAY_HEIGHT * DISPLAY_WIDTH;
 
 pub struct Display {
-  pub vram: [u8; VRAM_SIZE],
+  pub vram: [bool; VRAM_SIZE],
 }
 
 impl Display {
   pub fn new() -> Display {
     Display {
-      vram: [0; VRAM_SIZE],
+      vram: [false; VRAM_SIZE],
     }
   }
 
   pub fn cls(&mut self) {
-    self.vram = [0; VRAM_SIZE];
+    self.vram = [false; VRAM_SIZE];
   }
 
   pub fn set_pixel(&mut self, x: usize, y: usize, is_on: bool) {
-    self.vram[x + y * DISPLAY_WIDTH] = is_on as u8;
+    self.vram[x + y * DISPLAY_WIDTH] = is_on;
   }
 
   pub fn get_pixel(&mut self, x: usize, y: usize) -> bool {
-    self.vram[x + y * DISPLAY_WIDTH] == 1
+    self.vram[x + y * DISPLAY_WIDTH] == true
   }
 
   pub fn draw(&mut self, x: usize, y: usize, sprite: &[u8]) -> bool {
@@ -47,5 +47,13 @@ impl Display {
     }
 
     collision
+  }
+
+  pub fn copy_vram_to_vec(&self) -> Vec<u8> {
+    self
+      .vram
+      .into_iter()
+      .map(|&x| if x { 1 } else { 0 })
+      .collect()
   }
 }

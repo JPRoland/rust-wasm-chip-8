@@ -51,17 +51,42 @@ impl CPU {
     }
   }
 
+  pub fn reset(&mut self) {
+    let mut memory = [0; MEM_SIZE];
+
+    memory[0..FONT_SET.len()].copy_from_slice(&FONT_SET);
+
+    self.i = 0;
+    self.pc = 0x200;
+    self.memory = memory;
+    self.display.cls();
+    self.v = [0; 16];
+    self.stack = [0; 16];
+    self.sp = 0;
+    self.dt = 0;
+    self.st = 0;
+  }
+
   pub fn load(&mut self, data: &[u8]) {
-    self.memory[0x200..0x200 + data.len()].copy_from_slice(data);
+    self.memory[0x200..0x200 + data.len()].copy_from_slice(&data);
+  }
+
+  pub fn key_down(&mut self, key: u8) {
+    self.keypad.key_down(key);
+  }
+
+  pub fn key_up(&mut self, key: u8) {
+    self.keypad.key_up(key);
   }
 
   pub fn emulate_cycle(&mut self) -> Output {
-    let opcode = self.get_opcode();
+    let pc = self.pc;
+    let opcode = CPU::get_opcode(self.memory[pc], self.memory[pc + 1]);
     let parts = Opcode::new(opcode);
     self.decrement_timers();
     self.run_instruction(&parts);
 
-    Output::new(self.display.vram, self.st > 0)
+    Output::new(self.display.copy_vram_to_vec(), self.st > 0)
   }
 
   fn run_instruction(&mut self, opcode: &Opcode) {
@@ -199,14 +224,14 @@ impl CPU {
   fn op_8XY5(&mut self, x: usize, y: usize) -> ProgramCounter {
     let result = self.v[x] as i8 - self.v[y] as i8;
     self.v[x] = result as u8;
-    self.v[0xF] = if result < 0 { 1 } else { 0 };
+    self.v[0xF] = if self.v[x] > self.v[y] { 1 } else { 0 };
 
     ProgramCounter::Next
   }
 
   // SHR Vx, {, Vy}
   fn op_8XY6(&mut self, x: usize) -> ProgramCounter {
-    self.v[0xF] = self.v[x] & 1;
+    self.v[0xF] = self.v[x] & 0x1;
     self.v[x] >>= 1;
     ProgramCounter::Next
   }
@@ -215,14 +240,14 @@ impl CPU {
   fn op_8XY7(&mut self, x: usize, y: usize) -> ProgramCounter {
     let result = self.v[x] as i8 - self.v[y] as i8;
     self.v[x] = result as u8;
-    self.v[0xF] = if result < 0 { 1 } else { 0 };
+    self.v[0xF] = if self.v[x] > self.v[y] { 1 } else { 0 };
 
     ProgramCounter::Next
   }
 
   // SHL Vx {, Vy}
   fn op_8XYE(&mut self, x: usize) -> ProgramCounter {
-    self.v[0xF] = self.v[x] & 0x80;
+    self.v[0xF] = (self.v[x] & 0x80) >> 7;
     self.v[x] <<= 1;
     ProgramCounter::Next
   }
@@ -240,7 +265,7 @@ impl CPU {
 
   // JP V0, addr
   fn op_BNNN(&mut self, nnn: usize) -> ProgramCounter {
-    ProgramCounter::Jump(self.v[0] as usize + nnn)
+    ProgramCounter::Jump((self.v[0] as usize) + nnn)
   }
 
   // RND Vx, byte
@@ -248,7 +273,7 @@ impl CPU {
     let mut rng = OsRng::new().unwrap();
     let mut key = [0u8; 16];
     rng.fill_bytes(&mut key);
-    self.v[x] = rng.next_u32() as u8 & kk;
+    self.v[x] = (rng.next_u32() as u8) & kk;
 
     ProgramCounter::Next
   }
@@ -307,15 +332,15 @@ impl CPU {
 
   // LD F, Vx
   fn op_FX29(&mut self, x: usize) -> ProgramCounter {
-    self.i = self.v[x] as usize * 5;
+    self.i = (self.v[x] as usize) * 5;
     ProgramCounter::Next
   }
 
   // LD B, Vx
   fn op_FX33(&mut self, x: usize) -> ProgramCounter {
     self.memory[self.i] = self.v[x] / 100;
-    self.memory[self.i + 1] = (self.v[x] % 100) / 10;
-    self.memory[self.i + 2] = self.v[x] % 10;
+    self.memory[self.i + 1] = (self.v[x] / 10) % 10;
+    self.memory[self.i + 2] = (self.v[x] % 100) % 10;
     ProgramCounter::Next
   }
 
@@ -357,8 +382,8 @@ impl CPU {
     self.pc -= 2;
   }
 
-  fn get_opcode(&self) -> u16 {
-    (self.memory[self.pc] as u16) << 8 | (self.memory[self.pc + 1] as u16)
+  fn get_opcode(first: u8, second: u8) -> u16 {
+    (first as u16) << 8 | second as u16
   }
 }
 
@@ -412,13 +437,17 @@ impl Opcode {
 
 #[wasm_bindgen]
 pub struct Output {
-  vram: [u8; 2048],
+  vram: Vec<u8>,
   beep: bool,
 }
 
 #[wasm_bindgen]
 impl Output {
-  pub fn new(vram: [u8; 2048], beep: bool) -> Output {
+  pub fn new(vram: Vec<u8>, beep: bool) -> Output {
     Output { vram, beep }
+  }
+
+  pub fn get_vram(&self) -> Vec<u8> {
+    self.vram.clone()
   }
 }
