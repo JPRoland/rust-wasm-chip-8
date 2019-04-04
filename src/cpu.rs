@@ -5,8 +5,6 @@ use wasm_bindgen::prelude::*;
 use crate::display::Display;
 use crate::font::FONT_SET;
 use crate::keypad::Keypad;
-use crate::DISPLAY_HEIGHT;
-use crate::DISPLAY_WIDTH;
 
 use crate::MEM_SIZE;
 
@@ -85,6 +83,7 @@ impl CPU {
     let pc = self.pc;
     let opcode = CPU::get_opcode(self.memory[pc], self.memory[pc + 1]);
     let parts = Opcode::new(opcode);
+
     self.decrement_timers();
     self.run_instruction(&parts);
 
@@ -309,9 +308,14 @@ impl CPU {
 
   // LD Vx, K
   fn op_FX0A(&mut self, x: usize) -> ProgramCounter {
-    self.wait_for_keypress(x);
+    for (i, key) in self.keypad.keys.iter().enumerate() {
+      if *key == true {
+        self.v[x] = i as u8;
+        return ProgramCounter::Next;
+      }
+    }
 
-    ProgramCounter::Next
+    ProgramCounter::Jump(self.pc)
   }
 
   // LD DT, Vx
@@ -373,16 +377,6 @@ impl CPU {
     if self.dt > 0 {
       self.dt -= 1;
     }
-  }
-
-  fn wait_for_keypress(&mut self, x: usize) {
-    for (i, key) in self.keypad.keys.iter().enumerate() {
-      if *key == true {
-        self.v[x] = i as u8;
-        break;
-      }
-    }
-    self.pc -= 2;
   }
 
   fn get_opcode(first: u8, second: u8) -> u16 {
