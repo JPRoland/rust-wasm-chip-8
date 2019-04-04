@@ -39,12 +39,8 @@ const tick = (cpu, ctx) => {
   updateDisplay(displayState, ctx, WIDTH, HEIGHT);
 };
 
-const runLoop = (cpu, ctx) => {
-  return window.setInterval(tick.bind(this, cpu, ctx), 2);
-};
-
-const stopLoop = interval => {
-  window.clearInterval(interval);
+const stopLoop = id => {
+  window.cancelAnimationFrame(id);
 };
 
 const translateKeys = {
@@ -123,17 +119,25 @@ window.onload = (async () => {
   });
 
   let runState = false;
-  let interval;
+  let animId;
+
+  const runLoop = () => {
+    for (let i = 0; i < 10; i++) {
+      tick(cpu, ctx);
+    }
+
+    animId = window.requestAnimationFrame(runLoop);
+  };
 
   const startBtn = document.getElementById("start");
   startBtn.addEventListener("click", () => {
     if (runState) {
       startBtn.innerHTML = "Start";
-      stopLoop(interval);
+      stopLoop(animId);
       runState = false;
     } else {
       runState = true;
-      interval = runLoop(cpu, ctx);
+      runLoop();
       startBtn.innerHTML = "Stop";
     }
   });
