@@ -6,7 +6,7 @@ const HEIGHT = 32;
 const initCanvas = (w, h) => {
   const canvas = document.getElementById("canvas");
   const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "black";
+  ctx.fillStyle = "rgb(16, 15, 22)";
   ctx.fillRect(0, 0, w, h);
 
   return ctx;
@@ -16,9 +16,9 @@ const updateDisplay = (state, ctx, w, h) => {
   const imageData = ctx.createImageData(w, h);
 
   for (let i = 0; i < state.length; i++) {
-    imageData.data[i * 4] = state[i] === 1 ? 0xff : 0;
-    imageData.data[i * 4 + 1] = state[i] === 1 ? 0xa5 : 0;
-    imageData.data[i * 4 + 2] = 0;
+    imageData.data[i * 4] = state[i] === 1 ? 255 : 16;
+    imageData.data[i * 4 + 1] = state[i] === 1 ? 95 : 15;
+    imageData.data[i * 4 + 2] = state[i] === 1 ? 0 : 22;
     imageData.data[i * 4 + 3] = 255;
   }
 
@@ -88,7 +88,7 @@ const ROMS = [
   "WIPEOFF"
 ];
 
-// Create new elements to append to drop down list
+// function to create new elements to append to drop down list
 const el = domStr => {
   const html = new DOMParser().parseFromString(domStr, "text/html");
 
@@ -122,7 +122,7 @@ window.onload = (async () => {
   let animId;
 
   const runLoop = () => {
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 5; i++) {
       tick(cpu, ctx);
     }
 

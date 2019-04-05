@@ -11,22 +11,31 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <!-- <script src="./index.js"></script> -->
+    <div class="page_container">
+      <header class="header">
+        <h1 class="header__headline">CHIP-8</h1>
 
-    <header class="header">
-      <h1 class="header__headline">CHIP-8</h1>
+        <p class="header__text">
+          CHIP-8 interpreter written in Rust. Load a ROM to get started.
+        </p>
 
-      <p class="header__text">CHIP-8 interpreter written in Rust. Load a ROM to get started.</p>
-    </header>
+        <p class="header__text--small">
+          Controls are 1-4, Q-R, A-F, and Z-V.<br />
+          Just press buttons until something happens. <br />
+          Good Luck!
+        </p>
+      </header>
 
+      <div class="rom_select">
+        <label for="roms">Select a ROM:</label>
+        <select name="roms" id="roms"></select>
+        <button id="start">Start</button>
+      </div>
 
-    <section class="emu-container">
-      <label for="roms">Select a ROM:</label>
-      <select name="roms" id="roms"></select>
-      <button id="start">Start</button>
-
-      <canvas id="canvas" width="64" height="32"></canvas>
-    </section>
+      <div class="emulator">
+        <canvas id="canvas" width="64" height="32"></canvas>
+      </div>
+    </div>
 
     <script src="./bootstrap.js"></script>
   </body>

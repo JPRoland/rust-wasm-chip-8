@@ -31,16 +31,10 @@ pub struct CPU {
 #[wasm_bindgen]
 impl CPU {
   pub fn new() -> CPU {
-    let mut memory = [0; MEM_SIZE];
-
-    for i in 0..FONT_SET.len() {
-      memory[i] = FONT_SET[i];
-    }
-
     CPU {
       i: 0,
       pc: 0x200,
-      memory: memory,
+      memory: CPU::init_memory(),
       display: Display::new(),
       keypad: Keypad::new(),
       v: [0; 16],
@@ -52,13 +46,9 @@ impl CPU {
   }
 
   pub fn reset(&mut self) {
-    let mut memory = [0; MEM_SIZE];
-
-    memory[0..FONT_SET.len()].copy_from_slice(&FONT_SET);
-
     self.i = 0;
     self.pc = 0x200;
-    self.memory = memory;
+    self.memory = CPU::init_memory();
     self.display.cls();
     self.v = [0; 16];
     self.stack = [0; 16];
@@ -88,6 +78,14 @@ impl CPU {
     self.run_instruction(&parts);
 
     Output::new(self.display.copy_vram_to_vec(), self.st > 0)
+  }
+
+  fn init_memory() -> [u8; MEM_SIZE] {
+    let mut memory = [0; MEM_SIZE];
+
+    memory[0..FONT_SET.len()].copy_from_slice(&FONT_SET);
+
+    memory
   }
 
   fn run_instruction(&mut self, opcode: &Opcode) {

@@ -2,7 +2,8 @@ body {
   margin: 0;
   padding: 0;
   font-family: "VT323", monospace;
-  background-color: black;
+  line-height: 2em;
+  background-color: rgb(16, 15, 22);
 }
 
 canvas {
@@ -13,6 +14,65 @@ canvas {
   image-rendering: pixelated;
 }
 
+.page_container {
+  width: 600px;
+  height: 100vh;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .header {
-  color: orange;
+  color: rgb(255, 94, 0);
+  text-align: center;
+}
+
+.header__headline {
+  font-size: 3em;
+}
+
+.header__text {
+  font-size: 1.5em;
+}
+
+.header__text--small {
+  font-size: 1.2em;
+  line-height: 1.2em;
+}
+
+.rom_select {
+  margin-left: auto;
+  margin-right: auto;
+  color: rgb(255, 94, 0);
+}
+
+label {
+  font-size: 1.5em;
+}
+
+button,
+select {
+  font-family: "VT323", monospace;
+  width: 200px;
+  background-color: rgb(16, 15, 22);
+  color: rgb(255, 94, 0);
+  font-size: 1.5em;
+  border: 1px solid rgb(255, 94, 0);
+  outline: none;
+}
+
+button {
+  width: 100px;
+}
+
+button:active {
+  color: rgb(16, 15, 22);
+  background-color: rgb(255, 94, 0);
+}
+
+.emulator {
+  height: 320px;
+  width: 640px;
+  border: 2px solid rgb(255, 94, 0);
+  margin-top: 10px;
+  padding: 5px;
 }
